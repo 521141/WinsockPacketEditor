@@ -1,0 +1,40 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'           # 仅在 push 带有 vX.X.X 形式的 tag 时触发
+  workflow_dispatch:       # 允许手动触发
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 MSBuild 路径
+        uses: microsoft/setup-msbuild@v2
+
+      - name: 恢复 NuGet 包
+        uses: NuGet/setup-nuget@v2
+      - run: nuget restore
+
+      - name: 编译项目
+        run: msbuild /p:Configuration=Release
+
+      - name: 打包所有 Release 产物
+        run: |
+          $releaseDirs = Get-ChildItem -Path . -Recurse -Directory -Filter Release
+          foreach ($dir in $releaseDirs) {
+            Compress-Archive -Path "$($dir.FullName)\*" -DestinationPath "${{ github.event.repository.name }}-${{ github.ref_name }}.zip" -Update
+          }
+        shell: pwsh
+
+      - name: 创建 Release 并上传资源
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ github.event.repository.name }}-${{ github.ref_name }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
