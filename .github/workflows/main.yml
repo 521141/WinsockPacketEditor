@@ -22,7 +22,7 @@ jobs:
       - run: nuget restore
 
       - name: 编译项目
-        run: msbuild /p:Configuration=Release
+        run: msbuild /p:Configuration=Release /p:SignManifests=false
 
       - name: 打包所有 Release 产物
         run: |
